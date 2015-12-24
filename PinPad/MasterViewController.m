@@ -108,32 +108,6 @@
         [textField setKeyboardType:UIKeyboardTypeNumberPad];
     }];
     
-//    [alert addAction: [UIAlertAction actionWithTitle:@"Proceed" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
-//
-//        if ([alert.textFields[0].text intValue] == pin && (alert.textFields[0].text.length == 4)) {
-//            DetailViewController *dvc = [self.storyboard instantiateViewControllerWithIdentifier:@"detailedVC"];
-//            
-//            // passing tableview info to detailed view when PIN is right
-//            if (indexPath.section == 0) {
-//                dvc.profileName = [[self.parents[indexPath.row] valueForKey:@"firstname"] stringByAppendingString:[self.parents[indexPath.row] valueForKey:@"lastname"]];
-//                dvc.detailedImg = [UIImage imageNamed:[self.parents[indexPath.row] valueForKey:@"pic"]];
-//            }
-//            if (indexPath.section == 1) {
-//                dvc.profileName = [[self.kids[indexPath.row] valueForKey:@"firstname"] stringByAppendingString:[self.kids[indexPath.row] valueForKey:@"lastname"]];
-//                dvc.detailedImg = [UIImage imageNamed:[self.kids[indexPath.row] valueForKey:@"pic"]];
-//            }
-//            [self.navigationController pushViewController:dvc animated:YES];
-//        }
-//        else{
-//            // show another alert when old PIN is invalid
-//            UIAlertController *smallAlert = [UIAlertController alertControllerWithTitle:@"PIN INVALID" message:nil preferredStyle:UIAlertControllerStyleAlert];
-//            [smallAlert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleCancel handler:nil]]; 
-//            [self presentViewController:smallAlert animated:YES completion:nil];
-//            [tableView deselectRowAtIndexPath:indexPath animated:YES];
-//            return;
-//        }
-//    }]];
-    
     [alert addAction: [UIAlertAction actionWithTitle:@"Proceed" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
         
         if ([alert.textFields[0].text intValue] == pin && (alert.textFields[0].text.length == 4)) {

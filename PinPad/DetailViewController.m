@@ -10,7 +10,10 @@
 #import <Parse/Parse.h>
 
 
-@interface DetailViewController ()
+@interface DetailViewController (){
+    
+    BOOL pass;
+}
 
 @property (weak, nonatomic) IBOutlet UITextField *confirmNewPinInput;
 @property (weak, nonatomic) IBOutlet UITextField *pinInputTextbox;
@@ -28,6 +31,7 @@
     [super viewDidLoad];
     // Do any additional setup after loading the view, typically from a nib.
     [self configureView];
+    pass = NO;
     
     //hide keyboard when click non-textbox area
     UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc]
@@ -41,22 +45,18 @@
     self.detailDescriptionLabel.text = self.profileName;
     
     // updating reset button color every 0.01 sec
-    [NSTimer scheduledTimerWithTimeInterval:0.01f target:self
+    [NSTimer scheduledTimerWithTimeInterval:0.1f target:self
                                    selector:@selector(checkPinAvailability) userInfo:nil repeats:YES];
+    [NSTimer scheduledTimerWithTimeInterval:0.1f target:self
+                                   selector:@selector(checkPinValidity) userInfo:nil repeats:YES];
     
 }
 
 #pragma mark - RESET press & PIN logics
 
-- (IBAction)ResetBtnPress:(id)sender {
+- (void)checkPinValidity{
     
-    // reset back to originals
-    self.pinInputTextbox.layer.borderColor=[[UIColor lightGrayColor]CGColor];
-    self.pinInputTextbox.layer.borderWidth=1.0;
-    self.confirmNewPinInput.layer.borderColor=[[UIColor lightGrayColor]CGColor];
-    self.confirmNewPinInput.layer.borderWidth=1.0;
-    self.errorLabel.text = @"";
-    
+    //textbox border red when not 4 digits, a sequence, or all same; green when 4 only
     int inputKey = [self.pinInputTextbox.text intValue];
     
     int key1 = inputKey/1000;
@@ -64,75 +64,88 @@
     int key3 = inputKey/10 %10;
     int key4 = inputKey %10;
     
-    if ([self.pinInputTextbox.text isEqualToString:@""]||[self.confirmNewPinInput.text isEqualToString:@""]) {
+    if ([self.pinInputTextbox.text isEqualToString:@""]) {
         
-        if ([self.pinInputTextbox.text isEqualToString:@""]) {
-            self.pinInputTextbox.layer.borderColor=[[UIColor redColor]CGColor]; // change border color 
-            self.pinInputTextbox.layer.borderWidth=1.0;
-        }
-        if ([self.confirmNewPinInput.text isEqualToString:@""]) {
-            self.confirmNewPinInput.layer.borderColor=[[UIColor redColor]CGColor];
-            self.confirmNewPinInput.layer.borderWidth=1.0;
-        }
+        self.pinInputTextbox.layer.borderColor=[[UIColor redColor]CGColor]; // change border color
+        self.pinInputTextbox.layer.borderWidth=1.0;
         self.errorLabel.text = @"*required fields";
-        return;
+        
+    }else{
+        
+        // 4 digits?
+        if (self.pinInputTextbox.text.length != 4) {
+            
+            self.pinInputTextbox.layer.borderColor=[[UIColor redColor]CGColor]; // No
+            self.pinInputTextbox.layer.borderWidth=1.0;
+            self.errorLabel.text = @"PIN has to be 4 digits";
+            
+        }else{    // YES: check sequence, repeadance
+
+            if ((key1+1 == key2) && (key1+2 == key3) && (key1+3 == key4)) {
+                NSLog(@"it is a sequence!");
+                self.errorLabel.text = @"PIN can not be sequential digits";
+                return;
+            }
+            
+            if ((key1 == key2) && (key1 == key3) && (key1 == key4)) {
+                NSLog(@"all are equal");
+                self.errorLabel.text = @"PIN has to use at minimum 2 differnt numbers";
+                return;
+            }
+            
+            if ((key1-1 == key2) && (key1-2 == key3) && (key1-3 == key4)) {
+                NSLog(@"it is a sequence!");
+                self.errorLabel.text = @"PIN can not be sequential digits";
+                return;
+            }
+            
+            self.pinInputTextbox.layer.borderColor=[[UIColor lightGrayColor]CGColor]; // first box correct
+            self.pinInputTextbox.layer.borderWidth=1.0;
+            self.errorLabel.text = @"";
+        }
     }
     
-    if (self.pinInputTextbox.text.length == 4) {
+    if ([self.confirmNewPinInput.text isEqualToString:@""]) {
         
-        if ((key1+1 == key2) && (key1+2 == key3) && (key1+3 == key4)) {
-            NSLog(@"it is a sequence!");
-            self.errorLabel.text = @"PIN can not be sequential digits";
-            self.pinInputTextbox.text = @"";
-            self.confirmNewPinInput.text = @"";
-            return;
-        }
+        self.confirmNewPinInput.layer.borderColor=[[UIColor redColor]CGColor];
+        self.confirmNewPinInput.layer.borderWidth=1.0;
         
-        if ((key1 == key2) && (key1 == key3) && (key1 == key4)) {
-            NSLog(@"all are equal");
-            self.errorLabel.text = @"PIN has to use at minimum 2 differnt numbers";
-            self.pinInputTextbox.text = @"";
-            self.confirmNewPinInput.text = @"";
-            return;
-        }
-        
-        if ((key1-1 == key2) && (key1-2 == key3) && (key1-3 == key4)) {
-            NSLog(@"it is a sequence!");
-            self.errorLabel.text = @"PIN can not be sequential digits";
-            self.pinInputTextbox.text = @"";
-            self.confirmNewPinInput.text = @"";
-            return;
-        }
-        
-        if ([self.pinInputTextbox.text intValue] == [self.confirmNewPinInput.text intValue]) {
-            
-            NSLog(@"PIN set");
-            
-            // Create the PFQuery and retrieve data by ID
-            PFQuery *query = [PFQuery queryWithClassName:@"userPin"];
-            
-            [query getObjectInBackgroundWithId:@"Fg2zF7SLFi" block:^(PFObject *pfObject, NSError *error) {
-                
-                [pfObject setObject:self.pinInputTextbox.text forKey:@"PIN"];
-                [pfObject saveInBackground];
-            }];
-            
-            [self showAlertWithTitle:@"SUCCESS!" andMessage:@"Your PIN has been saved successfully!"];
-        }else{
-            self.errorLabel.text = @"PINs do not match";
-            self.confirmNewPinInput.text = @"";
-            self.pinInputTextbox.text = @"";
-        }
     }else{
-        self.pinInputTextbox.text = @"";
-        self.confirmNewPinInput.text = @"";
-        self.errorLabel.text = @"PIN must be 4 digits long";
+        
+        if (![self.confirmNewPinInput.text isEqualToString:self.pinInputTextbox.text]) {
+            self.confirmNewPinInput.layer.borderColor=[[UIColor redColor]CGColor];
+            self.confirmNewPinInput.layer.borderWidth=1.0;
+            self.errorLabel.text = @"PINs do not match";
+            pass = NO;
+        }else if (self.confirmNewPinInput.text.length == 4){
+            self.errorLabel.text = @"";
+            self.confirmNewPinInput.layer.borderColor=[[UIColor lightGrayColor]CGColor]; // two boxes match
+            self.confirmNewPinInput.layer.borderWidth=1.0;
+            pass = YES;
+        }
+    }
+}
+
+- (IBAction)ResetBtnPress:(id)sender {
+
+    if (pass) {
+        
+        // Create the PFQuery and retrieve data by ID
+        PFQuery *query = [PFQuery queryWithClassName:@"userPin"];
+        
+        [query getObjectInBackgroundWithId:@"Fg2zF7SLFi" block:^(PFObject *pfObject, NSError *error) {
+            
+            [pfObject setObject:self.pinInputTextbox.text forKey:@"PIN"];
+            [pfObject saveInBackground];
+        }];
+        
+        [self showAlertWithTitle:@"SUCCESS!" andMessage:@"Your PIN has been saved successfully!"];
     }
 }
 
 - (void)checkPinAvailability{
     
-    if ([self.pinInputTextbox.text intValue] == [self.confirmNewPinInput.text intValue] && self.pinInputTextbox.text.length ==4){
+    if (pass){
         self.resetBtnOutlet.layer.backgroundColor = [[UIColor greenColor] CGColor];
     }else{
         self.resetBtnOutlet.layer.backgroundColor = [[UIColor groupTableViewBackgroundColor] CGColor];
@@ -169,9 +182,89 @@
     }
 }
 
+#pragma mark - Some tweaks on the keyboard
+
 -(void)dismissKeyboard { //dissmiss two login textField keyboards
     [self.pinInputTextbox resignFirstResponder];
     [self.confirmNewPinInput resignFirstResponder];
+}
+
+#define kMin 50
+
+-(void)textFieldDidBeginEditing:(UITextField *)sender
+{
+    //move the main view, so that the keyboard does not hide it.
+    if (self.view.frame.origin.y + self.pinInputTextbox.frame.origin. y >= kMin) {
+        [self setViewMovedUp:YES];
+    }
+    if (self.view.frame.origin.y + self.confirmNewPinInput.frame.origin. y >= kMin) {
+        [self setViewMovedUp:YES];
+    }
+}
+
+
+
+//method to move the view up/down whenever the keyboard is shown/dismissed
+-(void)setViewMovedUp:(BOOL)movedUp
+{
+    [UIView beginAnimations:nil context:NULL];
+    [UIView setAnimationDuration:0.3]; // if you want to slide up the view
+    
+    CGRect rect = self.view.frame;
+    if (movedUp)
+    {
+        // 1. move the view's origin up so that the text field that will be hidden come above the keyboard
+        // 2. increase the size of the view so that the area behind the keyboard is covered up.
+        rect.origin.y = kMin - self.pinInputTextbox.frame.origin.y ;
+        
+    }
+    else
+    {
+        // revert back to the normal state.
+        rect.origin.y = 0;
+    }
+    self.view.frame = rect;
+    
+    [UIView commitAnimations];
+}
+
+
+- (void)keyboardWillShow:(NSNotification *)notif
+{
+    //keyboard will be shown now. depending for which textfield is active, move up or move down the view appropriately
+    
+    if ([self.pinInputTextbox isFirstResponder] && self.pinInputTextbox.frame.origin.y + self.view.frame.origin.y >= kMin)
+    {
+        [self setViewMovedUp:YES];
+    }
+    else if (![self.pinInputTextbox isFirstResponder] && self.pinInputTextbox.frame.origin.y  + self.view.frame.origin.y < kMin)
+    {
+        [self setViewMovedUp:NO];
+    }
+}
+
+- (void)keyboardWillHide:(NSNotification *)notif
+{
+    //keyboard will be shown now. depending for which textfield is active, move up or move down the view appropriately
+    if (self.view.frame.origin.y < 0 ) {
+        [self setViewMovedUp:NO];
+    }
+    
+}
+
+- (void)viewWillAppear:(BOOL)animated
+{
+    // register for keyboard notifications
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardWillShow:)
+                                                 name:UIKeyboardWillShowNotification object:self.view.window];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardWillHide:)
+                                                 name:UIKeyboardWillHideNotification object:self.view.window];
+}
+
+- (void)viewWillDisappear:(BOOL)animated
+{
+    // unregister for keyboard notifications while not visible.
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:UIKeyboardWillShowNotification object:nil];
 }
 
 
