@@ -17,6 +17,12 @@
 @property NSMutableArray *objects;
 @property NSMutableArray *parents;
 @property NSMutableArray *kids;
+@property NSArray *allParentsIDs;
+@property NSArray *allKidsIDs;
+@property NSArray *allIDs;
+@property NSMutableArray *allParentsPIN;
+@property NSMutableArray *allKidsPIN;
+
 
 @end
 
@@ -30,12 +36,14 @@
     self.navigationItem.leftBarButtonItem = self.editButtonItem;
  
     // compose the family info: 2 kids 1 parent just to demonstrate
-    NSDictionary *JamesPSullivan = [NSDictionary dictionaryWithObjectsAndKeys:@"James ",@"firstname",@"Sullivan",@"lastname",@"James.jpg",@"pic", nil];
-    NSDictionary *MikeWazowsky = [NSDictionary dictionaryWithObjectsAndKeys:@"Mike ",@"firstname",@"Wazowsky",@"lastname",@"Mikey.jpeg",@"pic", nil];
-    NSDictionary *Boo = [NSDictionary dictionaryWithObjectsAndKeys:@"Boo ",@"firstname",@"Sullivan",@"lastname",@"Boo.jpeg",@"pic", nil];
+    NSDictionary *JamesPSullivan = [NSDictionary dictionaryWithObjectsAndKeys:@"James ",@"firstname",@"Sullivan",@"lastname",@"James.jpg",@"pic",@"holder",@"accountType",@"26",@"age",@"Fg2zF7SLFi",@"ID", nil];
+    NSDictionary *MikeWazowsky = [NSDictionary dictionaryWithObjectsAndKeys:@"Mike ",@"firstname",@"Wazowsky",@"lastname",@"Mikey.jpeg",@"pic",@"member",@"accountType",@"22",@"age",@"rGX1dRfLsx",@"ID", nil];
+    NSDictionary *Boo = [NSDictionary dictionaryWithObjectsAndKeys:@"Boo ",@"firstname",@"Sullivan",@"lastname",@"Boo.jpeg",@"pic",@"member",@"accountType",@"4",@"age",@"DfJ1BzGnjh",@"ID", nil];
     self.parents = [NSMutableArray arrayWithObjects:JamesPSullivan,nil];
     self.kids = [NSMutableArray arrayWithObjects:MikeWazowsky,Boo, nil];
-    
+    self.allParentsIDs = [[NSArray alloc] initWithObjects:@"Fg2zF7SLFi", nil];
+    self.allKidsIDs = [[NSArray alloc] initWithObjects:@"rGX1dRfLsx",@"DfJ1BzGnjh", nil];
+    self.allIDs = [[NSArray alloc] initWithObjects:@"Fg2zF7SLFi",@"rGX1dRfLsx",@"DfJ1BzGnjh", nil];
 }
 
 - (void)viewWillAppear:(BOOL)animated {
@@ -44,6 +52,8 @@
 }
 
 - (void)viewDidAppear:(BOOL)animated{
+    self.allParentsPIN = [[NSMutableArray alloc] init];
+    self.allKidsPIN = [[NSMutableArray alloc] init];
     [self ConfigurePfQuery];
 }
 
@@ -58,9 +68,14 @@
     
     // Create the PFQuery and retrieve by ID
     PFQuery *query = [PFQuery queryWithClassName:@"userPin"];
-    [query getObjectInBackgroundWithId:@"Fg2zF7SLFi" block:^(PFObject *pfObject, NSError *error) {
-        pin = [[pfObject valueForKey:@"PIN"] intValue]; // get my old PIN from Parse
-    }];
+    for (int i = 0; i < [self.allParentsIDs count]; i++) {
+        PFObject *parentObj = [query getObjectWithId:self.allParentsIDs[i]];
+        [self.allParentsPIN addObject:[parentObj valueForKey:@"PIN"]]; // add parent PIN to array
+    }
+    for (int j = 0; j < [self.allKidsIDs count]; j++) {
+        PFObject *kidObj = [query getObjectWithId:self.allKidsIDs[j]];
+        [self.allKidsPIN addObject:[kidObj valueForKey:@"PIN"]]; // add kid PIN to array
+    }
 }
 
 #pragma mark - Table View
@@ -109,22 +124,25 @@
     }];
     
     [alert addAction: [UIAlertAction actionWithTitle:@"Proceed" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+        DetailViewController *dvc = [self.storyboard instantiateViewControllerWithIdentifier:@"detailedVC"];
         
-        if ([alert.textFields[0].text intValue] == pin && (alert.textFields[0].text.length == 4)) {
-            DetailViewController *dvc = [self.storyboard instantiateViewControllerWithIdentifier:@"detailedVC"];
-            
-            // passing tableview info to detailed view when PIN is right
-            if (indexPath.section == 0) {
-                dvc.profileName = [[self.parents[indexPath.row] valueForKey:@"firstname"] stringByAppendingString:[self.parents[indexPath.row] valueForKey:@"lastname"]];
-                dvc.detailedImg = [UIImage imageNamed:[self.parents[indexPath.row] valueForKey:@"pic"]];
-            }
-            if (indexPath.section == 1) {
-                dvc.profileName = [[self.kids[indexPath.row] valueForKey:@"firstname"] stringByAppendingString:[self.kids[indexPath.row] valueForKey:@"lastname"]];
-                dvc.detailedImg = [UIImage imageNamed:[self.kids[indexPath.row] valueForKey:@"pic"]];
-            }
+        if (indexPath.section == 0 && [alert.textFields[0].text intValue] == [self.allParentsPIN[indexPath.row] intValue]) {
+            // for parents, check pins and pass value
+            dvc.profileName = [[self.parents[indexPath.row] valueForKey:@"firstname"] stringByAppendingString:[self.parents[indexPath.row] valueForKey:@"lastname"]];
+            dvc.detailedImg = [UIImage imageNamed:[self.parents[indexPath.row] valueForKey:@"pic"]];
+            dvc.profileID = [self.parents[indexPath.row] valueForKey:@"ID"];
+            dvc.allParentsIDs = self.allParentsIDs;
+            dvc.allKidsIDs = self.allKidsIDs;
             [self.navigationController pushViewController:dvc animated:YES];
-        }
-        else{
+        }else if (indexPath.section == 1 && [alert.textFields[0].text intValue] == [self.allKidsPIN[indexPath.row] intValue]){
+            // for kids, check pins and pass value
+            dvc.profileName = [[self.kids[indexPath.row] valueForKey:@"firstname"] stringByAppendingString:[self.kids[indexPath.row] valueForKey:@"lastname"]];
+            dvc.detailedImg = [UIImage imageNamed:[self.kids[indexPath.row] valueForKey:@"pic"]];
+            dvc.profileID = [self.kids[indexPath.row] valueForKey:@"ID"];
+            dvc.allParentsIDs = self.allParentsIDs;
+            dvc.allKidsIDs = self.allKidsIDs;
+            [self.navigationController pushViewController:dvc animated:YES];
+        }else{
             // show another alert when old PIN is invalid
             UIAlertController *smallAlert = [UIAlertController alertControllerWithTitle:@"PIN INVALID" message:@"Make sure to enter the correct 4-digits PIN" preferredStyle:UIAlertControllerStyleAlert];
             [smallAlert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleCancel handler:nil]];

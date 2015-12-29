@@ -20,6 +20,8 @@
 @property (weak, nonatomic) IBOutlet UILabel *errorLabel;
 - (IBAction)ResetBtnPress:(id)sender;
 @property (weak, nonatomic) IBOutlet UIButton *resetBtnOutlet;
+@property (nonatomic) NSString *accountType;
+@property (nonatomic) PFQuery *query;
 
 @end
 
@@ -33,6 +35,8 @@
     [self configureView];
     pass = NO;
     
+    self.query = [PFQuery queryWithClassName:@"userPin"]; // set up PFQuery
+
     //hide keyboard when click non-textbox area
     UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc]
                                    initWithTarget:self
@@ -45,10 +49,24 @@
     self.detailDescriptionLabel.text = self.profileName;
     
     // updating reset button color every 0.01 sec
-    [NSTimer scheduledTimerWithTimeInterval:0.1f target:self
+    [NSTimer scheduledTimerWithTimeInterval:0.01f target:self
                                    selector:@selector(checkPinAvailability) userInfo:nil repeats:YES];
-    [NSTimer scheduledTimerWithTimeInterval:0.1f target:self
+    [NSTimer scheduledTimerWithTimeInterval:0.01f target:self
                                    selector:@selector(checkPinValidity) userInfo:nil repeats:YES];
+    
+}
+
+- (void)viewDidAppear:(BOOL)animated{
+  
+    // Create the PFQuery and check current user's accountType
+    [self.query getObjectInBackgroundWithId:self.profileID block:^(PFObject *pfObject, NSError *error) {
+        
+        self.accountType = [pfObject valueForKey:@"accountType"];
+        [pfObject saveInBackground];
+    }];
+    
+    self.allIDs = [[NSMutableArray alloc] initWithArray:self.allParentsIDs];
+    [self.allIDs addObjectsFromArray:self.allKidsIDs];
     
 }
 
@@ -128,19 +146,34 @@
 
 - (IBAction)ResetBtnPress:(id)sender {
 
-    if (pass) {
-        
-        // Create the PFQuery and retrieve data by ID
-        PFQuery *query = [PFQuery queryWithClassName:@"userPin"];
-        
-        [query getObjectInBackgroundWithId:@"Fg2zF7SLFi" block:^(PFObject *pfObject, NSError *error) {
+    if (pass && [self.accountType isEqualToString:@"member"]) {
+
+        [self.query getObjectInBackgroundWithId:self.profileID block:^(PFObject *pfObject, NSError *error) {
             
             [pfObject setObject:self.pinInputTextbox.text forKey:@"PIN"];
             [pfObject saveInBackground];
         }];
+        [self popCurrentViewWhenResetIsSuccessful];
         
-        [self showAlertWithTitle:@"SUCCESS!" andMessage:@"Your PIN has been saved successfully!"];
+    }else if(pass && [self.accountType isEqualToString:@"holder"]){
+        // change all PIN
+        for (int i=0; i<[self.allIDs count]; i++) {
+            PFObject *object = [self.query getObjectWithId:self.allIDs[i]];
+            [object setObject:self.pinInputTextbox.text forKey:@"PIN"];
+            [object save];
+        }
+        [self popCurrentViewWhenResetIsSuccessful];
     }
+}
+
+- (void)popCurrentViewWhenResetIsSuccessful{
+    
+    UIAlertController *alert=[UIAlertController alertControllerWithTitle:@"SUCCESS!" message:@"Your PIN has been successfully set" preferredStyle:UIAlertControllerStyleAlert];
+    UIAlertAction *defaultAction = [UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action){
+        [self.navigationController popToRootViewControllerAnimated:YES]; // pop it
+    }];
+    [alert addAction:defaultAction];
+    [self presentViewController:alert animated:YES completion:nil];
 }
 
 - (void)checkPinAvailability{

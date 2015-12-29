@@ -15,6 +15,10 @@
 @property (weak, nonatomic) IBOutlet UIImageView *myProfileImgView;
 @property (nonatomic) UIImage *detailedImg;
 @property (nonatomic) NSString *profileName;
+@property (nonatomic) NSString *profileID;
+@property (nonatomic) NSArray *allParentsIDs;
+@property (nonatomic) NSArray *allKidsIDs;
+@property (nonatomic) NSMutableArray *allIDs;
 
 @end
 
